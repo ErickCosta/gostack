@@ -1,5 +1,6 @@
 import * as Yup from 'yup';
 import User from '../models/User';
+import File from '../models/File';
 
 class UserController {
   async store(req, res) {
@@ -23,13 +24,24 @@ class UserController {
       return res.status(300).json({ error: 'User email already exists' });
     }
 
-    const { id, name, email, provider } = await User.create(req.body);
+    if (req.body.avatar_id) {
+      const fileExists = await File.findByPk(req.body.avatar_id);
+
+      if (!fileExists) {
+        return res.status(401).json({ error: 'File not found' });
+      }
+    }
+
+    const { id, name, email, provider, avatar_id } = await User.create(
+      req.body
+    );
 
     return res.json({
       id,
       name,
       email,
       provider,
+      avatar_id,
     });
   }
 
@@ -57,7 +69,7 @@ class UserController {
     const user = await User.findByPk(req.userId);
 
     if (!user) {
-      return res.status(401).json({ error: 'User nor found' });
+      return res.status(401).json({ error: 'User not found' });
     }
 
     if (email !== user.email) {
@@ -72,9 +84,17 @@ class UserController {
       return res.status(401).json({ error: 'Password does not match' });
     }
 
-    const { id, name, provider } = await user.update(req.body);
+    if (req.body.avatar_id) {
+      const fileExists = await File.findByPk(req.body.avatar_id);
 
-    return res.json({ id, name, email, provider });
+      if (!fileExists) {
+        return res.status(401).json({ error: 'File not found' });
+      }
+    }
+
+    const { id, name, provider, avatar_id } = await user.update(req.body);
+
+    return res.json({ id, name, email, provider, avatar_id });
   }
 }
 
