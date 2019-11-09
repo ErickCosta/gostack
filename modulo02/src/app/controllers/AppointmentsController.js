@@ -1,6 +1,6 @@
 import * as Yup from 'yup';
 import { startOfHour, parseISO, isBefore } from 'date-fns';
-import Appointments from '../models/Appointments';
+import Appointment from '../models/Appointments';
 import User from '../models/User';
 import File from '../models/File';
 
@@ -8,7 +8,7 @@ class AppointmentsController {
   async index(req, res) {
     const { page } = req.query;
 
-    const appointments = await Appointments.findAll({
+    const appointments = await Appointment.findAll({
       where: {
         user_id: req.userId,
         canceled_at: null,
@@ -61,7 +61,7 @@ class AppointmentsController {
       return res.status(400).json({ error: 'Past date is invalid' });
     }
 
-    const checkAvaliability = await Appointments.findOne({
+    const checkAvaliability = await Appointment.findOne({
       where: { provider_id, canceled_at: null, date: hourStart },
     });
 
@@ -69,7 +69,7 @@ class AppointmentsController {
       return res.status(400).json({ error: 'Date is not available' });
     }
 
-    const appointment = await Appointments.create({
+    const appointment = await Appointment.create({
       user_id: req.userId,
       provider_id,
       date: hourStart,
