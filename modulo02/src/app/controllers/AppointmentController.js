@@ -18,7 +18,7 @@ class AppointmentsController {
         user_id: req.userId,
         canceled_at: null,
       },
-      attributes: ['id', 'date'],
+      attributes: ['id', 'date', 'past', 'cancelable'],
       limit: 20,
       offset: (page - 1) * 20,
       include: [
@@ -110,6 +110,12 @@ class AppointmentsController {
         },
       ],
     });
+
+    if (!appointment) {
+      return res
+        .status(400)
+        .json({ error: 'Appointment not available for cancel' });
+    }
 
     if (appointment.user_id !== req.userId) {
       return res
