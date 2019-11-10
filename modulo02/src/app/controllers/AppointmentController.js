@@ -1,10 +1,12 @@
 import * as Yup from 'yup';
-import { startOfHour, parseISO, isBefore, format } from 'date-fns';
+import { startOfHour, parseISO, isBefore, format, subHours } from 'date-fns';
 import pt from 'date-fns/locale/pt';
 import Appointment from '../models/Appointments';
 import User from '../models/User';
 import File from '../models/File';
 import NotificationSchema from '../schemas/Notification';
+
+import Mail from '../../lib/Mail';
 
 class AppointmentsController {
   async index(req, res) {
@@ -16,8 +18,8 @@ class AppointmentsController {
         canceled_at: null,
       },
       attributes: ['id', 'date'],
-      limit: 1,
-      offset: (page - 1) * 1,
+      limit: 20,
+      offset: (page - 1) * 20,
       include: [
         {
           model: User,
@@ -87,6 +89,54 @@ class AppointmentsController {
     await NotificationSchema.create({
       content: `Novo agendamento para ${name} para o ${formattedDate}`,
       user: provider_id,
+    });
+
+    return res.json(appointment);
+  }
+
+  async delete(req, res) {
+    const appointment = await Appointment.findByPk(req.params.id, {
+      include: [
+        {
+          model: User,
+          as: 'provider',
+          attributes: ['name', 'email'],
+        },
+        {
+          model: User,
+          as: 'user',
+          attributes: ['name', 'email'],
+        },
+      ],
+    });
+
+    if (appointment.user_id !== req.userId) {
+      return res
+        .status(401)
+        .json({ error: 'User do not remove this appointment' });
+    }
+
+    const dateWithSub = subHours(appointment.date, 2);
+
+    if (isBefore(dateWithSub, new Date())) {
+      return res.status(401).json({ error: 'Appoint can not cancel' });
+    }
+
+    appointment.canceled_at = new Date();
+
+    await appointment.save(appointment);
+
+    await Mail.sendMail({
+      to: `${appointment.provider.name} <${appointment.provider.email}>`,
+      subject: 'Appointment was cancel',
+      template: 'cancellation',
+      context: {
+        provider: appointment.provider.name,
+        user: appointment.user.name,
+        date: format(appointment.date, "'dia' dd 'de' MMMM', às' H:mm'h'", {
+          locale: pt,
+        }),
+      },
     });
 
     return res.json(appointment);
