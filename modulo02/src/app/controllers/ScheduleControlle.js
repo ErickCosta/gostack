@@ -24,7 +24,7 @@ class ScheduleController {
         provider_id: req.userId,
         canceled_at: null,
         date: {
-          [Op.between]: [startOfDay(parseDate), endOfDay(parseDate)],
+          [Op.betwen]: [startOfDay(parseDate), endOfDay(parseDate)],
         },
       },
       order: ['date'],
